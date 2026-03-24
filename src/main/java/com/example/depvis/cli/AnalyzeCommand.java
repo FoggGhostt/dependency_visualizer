@@ -1,10 +1,13 @@
 package com.example.depvis.cli;
 
+import com.example.depvis.scan.JavaSourceScanner;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @Command(
@@ -27,13 +30,19 @@ public class AnalyzeCommand implements Callable<Integer> {
     String[] exclude = new String[0];
 
     @Override
-    public Integer call() {
-        System.out.println("[analyze] not implemented yet");
-        System.out.println("  projectPath = " + projectPath);
-        System.out.println("  outDir      = " + outDir);
-        System.out.println("  include     = " + String.join(",", include));
-        System.out.println("  exclude     = " + String.join(",", exclude));
-        // TODO: stage 3+ — scan, parse, build graph, save graph.json
+    public Integer call() throws IOException {
+        System.out.println("[analyze] scanning: " + projectPath);
+
+        JavaSourceScanner scanner = new JavaSourceScanner(include, exclude);
+        List<Path> files = scanner.scan(projectPath);
+
+        System.out.println("[analyze] found " + files.size() + " Java files");
+        for (Path f : files) {
+            System.out.println("  " + f);
+        }
+
+        // TODO: stage 4+ — parse files, build graph, write graph.json to outDir
+        System.out.println("[analyze] graph build is not implemented yet (out=" + outDir + ")");
         return 0;
     }
 }
