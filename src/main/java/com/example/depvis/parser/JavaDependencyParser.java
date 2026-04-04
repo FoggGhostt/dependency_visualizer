@@ -1,13 +1,16 @@
 package com.example.depvis.parser;
 
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParserConfiguration.LanguageLevel;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.RecordDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.type.Type;
 
@@ -20,6 +23,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class JavaDependencyParser {
+
+    public JavaDependencyParser() {
+        ParserConfiguration cfg = StaticJavaParser.getParserConfiguration();
+        cfg.setLanguageLevel(LanguageLevel.JAVA_21);
+    }
 
     private static final Set<String> PRIMITIVES = Set.of(
             "void", "int", "long", "short", "byte", "double", "float", "boolean", "char"
@@ -57,34 +65,40 @@ public class JavaDependencyParser {
             importMap.put(simple, fqn);
         }
 
-        Optional<ClassOrInterfaceDeclaration> clsOpt = cu.findFirst(ClassOrInterfaceDeclaration.class);
-        if (clsOpt.isEmpty()) {
+        Optional<TypeDeclaration> typeOpt = cu.findFirst(TypeDeclaration.class);
+        if (typeOpt.isEmpty()) {
             return Optional.empty();
         }
-        ClassOrInterfaceDeclaration cls = clsOpt.get();
-        String simpleName = cls.getNameAsString();
+        TypeDeclaration<?> type = typeOpt.get();
+        String simpleName = type.getNameAsString();
         String fqn = packageName.isEmpty() ? simpleName : packageName + "." + simpleName;
 
         Set<String> deps = new TreeSet<>();
 
-        cls.findAll(FieldDeclaration.class).forEach(fd ->
+        type.findAll(FieldDeclaration.class).forEach(fd ->
                 addType(fd.getElementType(), packageName, importMap, deps));
 
-        cls.findAll(MethodDeclaration.class).forEach(md -> {
+        type.findAll(MethodDeclaration.class).forEach(md -> {
             addType(md.getType(), packageName, importMap, deps);
             for (Parameter p : md.getParameters()) {
                 addType(p.getType(), packageName, importMap, deps);
             }
         });
 
-        cls.findAll(ConstructorDeclaration.class).forEach(cd -> {
+        type.findAll(ConstructorDeclaration.class).forEach(cd -> {
             for (Parameter p : cd.getParameters()) {
                 addType(p.getType(), packageName, importMap, deps);
             }
         });
 
-        cls.findAll(ObjectCreationExpr.class).forEach(oce ->
+        type.findAll(ObjectCreationExpr.class).forEach(oce ->
                 addTypeName(oce.getType().getNameAsString(), packageName, importMap, deps));
+
+        if (type instanceof RecordDeclaration rd) {
+            for (Parameter p : rd.getParameters()) {
+                addType(p.getType(), packageName, importMap, deps);
+            }
+        }
 
         deps.remove(fqn);
 

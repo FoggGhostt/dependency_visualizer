@@ -1,5 +1,8 @@
 package com.example.depvis.cli;
 
+import com.example.depvis.export.JsonExporter;
+import com.example.depvis.model.GraphBuilder;
+import com.example.depvis.model.GraphSnapshot;
 import com.example.depvis.parser.JavaDependencyParser;
 import com.example.depvis.parser.ParsedClass;
 import com.example.depvis.scan.JavaSourceScanner;
@@ -48,12 +51,14 @@ public class AnalyzeCommand implements Callable<Integer> {
             pc.ifPresent(parsed::add);
         }
         System.out.println("[analyze] parsed " + parsed.size() + " classes");
-        for (ParsedClass pc : parsed) {
-            System.out.println("  " + pc.fqn() + " -> " + pc.dependencies());
-        }
 
-        // TODO: stage 5 — build graph and write graph.json to outDir
-        System.out.println("[analyze] graph build is not implemented yet (out=" + outDir + ")");
+        GraphSnapshot graph = GraphBuilder.build(projectPath, parsed);
+        Path graphFile = outDir.resolve("graph.json");
+        new JsonExporter().writeGraph(graph, graphFile);
+
+        System.out.println("[analyze] wrote " + graphFile
+                + " (" + graph.nodes().size() + " nodes, "
+                + graph.edges().size() + " edges)");
         return 0;
     }
 }
