@@ -1,9 +1,13 @@
 package com.example.depvis.cli;
 
+import com.example.depvis.export.HtmlReporter;
+import com.example.depvis.export.JsonExporter;
+import com.example.depvis.model.GraphSnapshot;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -21,11 +25,10 @@ public class ReportCommand implements Callable<Integer> {
     Path outFile;
 
     @Override
-    public Integer call() {
-        System.out.println("[report] not implemented yet");
-        System.out.println("  graphJson = " + graphJson);
-        System.out.println("  outFile   = " + outFile);
-        // TODO: stage 7 — render HTML report
+    public Integer call() throws IOException {
+        GraphSnapshot graph = new JsonExporter().readGraph(graphJson);
+        new HtmlReporter().writeReport(graph, outFile);
+        System.out.println("[report] wrote " + outFile);
         return 0;
     }
 }
