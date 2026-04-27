@@ -1,0 +1,11 @@
+{
+  "include": ["**/*.java"],
+  "exclude": ["**/test/**"],
+  "forbidden": [
+    {
+      "from": "com.example.demo.api",
+      "to": "com.example.demo.persistence"
+    }
+  ],
+  "layers": []
+}
